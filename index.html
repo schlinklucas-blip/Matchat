@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Matchat - Conecta cerca tuyo</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#ec4899" />
+  <link rel="apple-touch-icon" href="icon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #0f0f13; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
+    .blur-private { filter: blur(14px); transform: scale(1.08); }
+  </style>
+</head>
+<body class="min-h-screen flex justify-center bg-black">
+  <div id="app" class="w-full max-w-md bg-[#0f0f13] min-h-screen flex flex-col relative shadow-2xl border-x border-zinc-800">
+    
+    <!-- Header -->
+    <header class="px-5 py-4 flex items-center justify-between border-b border-zinc-800/80 bg-[#0f0f13]/95 sticky top-0 z-20">
+      <div class="flex items-center gap-2.5">
+        <img src="icon.png" alt="Matchat" class="w-9 h-9 rounded-xl shadow" />
+        <span class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-pink-500 to-rose-400 bg-clip-text text-transparent">Matchat</span>
+      </div>
+      <button onclick="openModal('modal-install')" class="text-xs bg-zinc-800 hover:bg-zinc-700 text-pink-400 font-semibold px-3 py-1.5 rounded-full border border-pink-500/30">
+        Instalar App
+      </button>
+    </header>
+
+    <!-- PANTALLA 1: REGISTRO Y PAGO ($3.000 / 35 DÍAS) -->
+    <section id="screen-onboarding" class="p-6 flex-1 flex flex-col justify-between">
+      <div>
+        <h1 class="text-2xl font-bold mb-1">Bienvenido a Matchat</h1>
+        <p class="text-sm text-zinc-400 mb-6">Completa tus datos para encontrar personas en tu provincia.</p>
+
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs text-zinc-400 block mb-1">Nombre</label>
+            <input id="reg-name" type="text" placeholder="Ej: Lucas" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-pink-500" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs text-zinc-400 block mb-1">Edad</label>
+              <input id="reg-age" type="number" placeholder="28" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-pink-500" />
+            </div>
+            <div>
+              <label class="text-xs text-zinc-400 block mb-1">Provincia</label>
+              <select id="reg-province" class="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-pink-500">
+                <option value="Misiones">Misiones</option>
+                <option value="Buenos Aires">Buenos Aires</option>
+                <option value="Córdoba">Córdoba</option>
+                <option value="Santa Fe">Santa Fe</option>
+                <option value="Corrientes">Corrientes</option>
+                <option value="Otra">Otra provincia</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Selección de foto y privacidad -->
+          <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-4">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-medium">Foto de perfil</span>
+              <div class="flex bg-zinc-800 rounded-lg p-0.5 text-xs">
+                <button type="button" id="btn-pub" onclick="setPhotoPrivacy('publica')" class="px-2.5 py-1 rounded-md bg-pink-600 text-white font-medium">Pública</button>
+                <button type="button" id="btn-priv" onclick="setPhotoPrivacy('privada')" class="px-2.5 py-1 rounded-md text-zinc-400">Privada</button>
+              </div>
+            </div>
+            <input type="file" id="reg-photo" accept="image/*" class="text-xs text-zinc-400 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-pink-500/20 file:text-pink-400 hover:file:bg-pink-500/30" />
+            <p id="privacy-hint" class="text-[11px] text-zinc-500 mt-2">Tu foto será visible para todos en tu provincia.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloque de Membresía Mercado Pago -->
+      <div class="mt-6 bg-gradient-to-b from-zinc-900 to-zinc-950 border border-pink-500/30 rounded-2xl p-4">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-sm font-semibold text-white">Membresía Matchat</span>
+          <span class="text-lg font-bold text-pink-400">$3.000</span>
+        </div>
+        <p class="text-xs text-zinc-400 mb-4">Acceso completo por 35 días desde el momento del pago. Te avisaremos 7 días antes de renovar.</p>
+        
+        <a href="https://mpago.li/1N3JxbQ" target="_blank" onclick="markPaymentStarted()" class="block w-full text-center bg-sky-500 hover:bg-sky-400 text-white font-bold py-3 rounded-xl text-sm shadow-lg transition mb-2">
+          1. Pagar $3.000 con Mercado Pago
+        </a>
+        <button onclick="completeRegistration()" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-bold py-3 rounded-xl text-sm transition">
+          2. Ya pagué — Ingresar y dar permisos
+        </button>
+      </div>
+    </section>
+
+    <!-- PANTALLA 2: APLICACIÓN PRINCIPAL (OCULTA HASTA REGISTRO) -->
+    <main id="screen-main" class="hidden flex-1 flex flex-col justify-between pb-20">
+      
+      <!-- Alerta 7 días antes (Oculta por defecto hasta que queden <= 7 días) -->
+      <div id="renewal-alert" class="hidden mx-4 mt-3 bg-amber-500/15 border border-amber-500/40 rounded-xl p-3 flex items-center justify-between">
+        <div class="text-xs text-amber-200">
+          <strong class="block text-amber-400">Renovación próxima</strong>
+          Tu membresía vence en <span id="days-left-alert">7</span> días ($3.000).
+        </div>
+        <a href="https://mpago.li/1N3JxbQ" target="_blank" class="bg-amber-500 text-black text-xs font-bold px-3 py-1.5 rounded-lg">Renovar</a>
+      </div>
+
+      <!-- TAB: EXPLORAR -->
+      <div id="tab-explore" class="p-4 flex-1 flex flex-col">
+        <div class="flex gap-2 mb-4">
+          <button onclick="filterMode('provincia')" id="filter-prov" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-pink-600 text-white">Mi Provincia (<span id="user-prov-label">Misiones</span>)</button>
+          <button onclick="filterMode('cerca')" id="filter-cerca" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-zinc-800 text-zinc-400">Cerca de mí</button>
+        </div>
+
+        <div id="profile-card" class="relative flex-1 rounded-3xl overflow-hidden bg-zinc-900 border border-zinc-800 shadow-xl min-h-[420px] flex flex-col justify-end">
+          <img id="card-img" src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80" class="absolute inset-0 w-full h-full object-cover" />
+          <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+          
+          <span id="card-badge" class="absolute top-4 right-4 bg-black/60 backdrop-blur-md text-xs px-3 py-1 rounded-full border border-white/15">Foto Pública</span>
+
+          <div class="relative p-5 z-10">
+            <h2 class="text-2xl font-bold"><span id="card-name">Camila</span>, <span id="card-age">24</span></h2>
+            <p class="text-xs text-pink-400 font-medium mb-2" id="card-loc">Posadas, Misiones • A 4 km</p>
+            <p class="text-sm text-zinc-200 mb-5" id="card-bio">Amante del mate, las caminatas por la costanera y conocer gente buena onda.</p>
+
+            <div class="flex justify-center items-center gap-5">
+              <button onclick="nextProfile()" class="w-14 h-14 rounded-full bg-zinc-800/90 border border-zinc-700 flex items-center justify-center text-xl hover:scale-105 transition">✕</button>
+              <button onclick="likeProfile()" class="w-16 h-16 rounded-full bg-gradient-to-tr from-pink-600 to-rose-500 flex items-center justify-center text-2xl shadow-lg shadow-pink-600/30 hover:scale-105 transition">♥</button>
+              <button onclick="openModal('modal-dm')" class="w-14 h-14 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-400 flex items-center justify-center text-xl hover:scale-105 transition">✉</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: CHATS -->
+      <div id="tab-chats" class="hidden p-4 space-y-3">
+        <h2 class="text-lg font-bold mb-2">Tus Conexiones</h2>
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-full bg-pink-600 flex items-center justify-center font-bold">C</div>
+              <div>
+                <h3 class="font-bold text-sm">Camila, 24</h3>
+                <p class="text-xs text-emerald-400">Solicitud aceptada • Chat activo</p>
+              </div>
+            </div>
+            <button onclick="likeUserPhoto()" class="text-xs bg-pink-500/20 text-pink-400 px-2.5 py-1 rounded-lg border border-pink-500/30">♥ Foto</button>
+          </div>
+          <div id="chat-messages" class="bg-black/40 rounded-xl p-3 h-48 overflow-y-auto space-y-2 text-xs mb-3">
+            <div class="bg-zinc-800 text-zinc-200 p-2.5 rounded-xl rounded-tl-none max-w-[80%]">¡Hola! Vi tu mensaje y acepté tu solicitud 😊</div>
+          </div>
+          <div class="flex gap-2">
+            <input id="chat-input" type="text" placeholder="Escribe un mensaje..." class="flex-1 bg-zinc-800 rounded-xl px-3 py-2 text-xs focus:outline-none" />
+            <button onclick="sendChat()" class="bg-pink-600 px-4 py-2 rounded-xl text-xs font-bold">Enviar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: MI PERFIL -->
+      <div id="tab-profile" class="hidden p-4 space-y-4">
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 text-center">
+          <img id="my-avatar" src="icon.png" class="w-20 h-20 rounded-full mx-auto object-cover border-2 border-pink-500 mb-3" />
+          <h2 id="my-name-display" class="text-lg font-bold">Lucas, 28</h2>
+          <p id="my-prov-display" class="text-xs text-zinc-400">Misiones • Foto Pública</p>
+        </div>
+
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-4 space-y-2">
+          <div class="flex justify-between text-xs">
+            <span class="text-zinc-400">Estado de Membresía:</span>
+            <span class="text-emerald-400 font-semibold">Activa (35 días)</span>
+          </div>
+          <div class="flex justify-between text-xs">
+            <span class="text-zinc-400">Días restantes:</span>
+            <span id="sub-days-left" class="font-bold">35 días</span>
+          </div>
+          <button onclick="simulateDay28()" class="w-full mt-2 bg-zinc-800 hover:bg-zinc-700 text-xs py-2 rounded-lg text-zinc-300">
+            Simular aviso de 7 días antes de vencer
+          </button>
+        </div>
+
+        <button onclick="openModal('modal-permissions')" class="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center text-sm font-medium">
+          <span>Permisos de la aplicación</span>
+          <span class="text-pink-400 text-xs">Configurar →</span>
+        </button>
+      </div>
+
+      <!-- Bottom Navigation -->
+      <nav class="fixed bottom-0 w-full max-w-md bg-[#0f0f13]/95 border-t border-zinc-800 flex justify-around py-3 text-xs">
+        <button onclick="switchTab('explore')" class="text-pink-500 font-bold flex flex-col items-center gap-1">Descubrir</button>
+        <button onclick="switchTab('chats')" class="text-zinc-400 hover:text-white flex flex-col items-center gap-1">Chats</button>
+        <button onclick="switchTab('profile')" class="text-zinc-400 hover:text-white flex flex-col items-center gap-1">Mi Perfil</button>
+      </nav>
+    </main>
+
+    <!-- MODAL: PERMISOS DEL SISTEMA -->
+    <div id="modal-permissions" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold">Permisos de Matchat</h3>
+        <p class="text-xs text-zinc-400">Para mostrarte personas de tu provincia y subir fotos, activa estos permisos:</p>
+        <div class="space-y-3 text-sm">
+          <label class="flex items-center justify-between bg-zinc-800/70 p-3 rounded-xl">
+            <span>📍 Ubicación (Provincia/Cercanía)</span>
+            <input type="checkbox" checked class="accent-pink-500 w-4 h-4" />
+          </label>
+          <label class="flex items-center justify-between bg-zinc-800/70 p-3 rounded-xl">
+            <span>🖼️ Fotos y Videos</span>
+            <input type="checkbox" checked class="accent-pink-500 w-4 h-4" />
+          </label>
+          <label class="flex items-center justify-between bg-zinc-800/70 p-3 rounded-xl">
+            <span>📷 Cámara</span>
+            <input type="checkbox" checked class="accent-pink-500 w-4 h-4" />
+          </label>
+          <label class="flex items-center justify-between bg-zinc-800/70 p-3 rounded-xl">
+            <span>🔔 Notificaciones</span>
+            <input type="checkbox" checked class="accent-pink-500 w-4 h-4" />
+          </label>
+        </div>
+        <button onclick="closeModal('modal-permissions')" class="w-full bg-pink-600 py-3 rounded-xl font-bold text-sm">Guardar y Continuar</button>
+      </div>
+    </div>
+
+    <!-- MODAL: MENSAJE DIRECTO -->
+    <div id="modal-dm" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6 w-full max-w-sm space-y-4">
+        <h3 class="text-lg font-bold">Enviar mensaje directo</h3>
+        <p class="text-xs text-zinc-400">El chat se habilitará cuando la otra persona acepte tu solicitud.</p>
+        <textarea id="dm-text" rows="3" placeholder="Hola! Me gustaría conocerte..." class="w-full bg-zinc-800 rounded-xl p-3 text-sm focus:outline-none"></textarea>
+        <div class="flex gap-2">
+          <button onclick="closeModal('modal-dm')" class="flex-1 bg-zinc-800 py-2.5 rounded-xl text-xs">Cancelar</button>
+          <button onclick="sendDirectRequest()" class="flex-1 bg-pink-600 py-2.5 rounded-xl text-xs font-bold">Enviar Solicitud</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: INSTALAR EN CELULAR -->
+    <div id="modal-install" class="hidden fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6 w-full max-w-sm space-y-3">
+        <h3 class="text-lg font-bold">Descargar Matchat en tu celular</h3>
+        <p class="text-xs text-zinc-300"><strong>En Android (Chrome):</strong> Toca los 3 puntos arriba a la derecha y elige <em>"Instalar aplicación"</em> o <em>"Agregar a la pantalla principal"</em>.</p>
+        <p class="text-xs text-zinc-300"><strong>En iPhone (Safari):</strong> Toca el botón Compartir (cuadrado con flecha) y selecciona <em>"Agregar a inicio"</em>.</p>
+        <button onclick="closeModal('modal-install')" class="w-full bg-pink-600 py-2.5 rounded-xl text-xs font-bold mt-2">Entendido</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+
+    let photoPrivacy = 'publica';
+    let currentIdx = 0;
+    const profiles = [
+      { name: 'Camila', age: 24, loc: 'Posadas, Misiones • A 4 km', bio: 'Amante del mate, las caminatas por la costanera y conocer gente buena onda.', img: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80', priv: false },
+      { name: 'Sofía', age: 27, loc: 'Oberá, Misiones • A 85 km', bio: 'Disfruto viajar, escuchar música y compartir buenos momentos.', img: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=600&q=80', priv: true }
+    ];
+
+    function setPhotoPrivacy(type) {
+      photoPrivacy = type;
+      document.getElementById('btn-pub').className = type === 'publica' ? 'px-2.5 py-1 rounded-md bg-pink-600 text-white font-medium' : 'px-2.5 py-1 rounded-md text-zinc-400';
+      document.getElementById('btn-priv').className = type === 'privada' ? 'px-2.5 py-1 rounded-md bg-pink-600 text-white font-medium' : 'px-2.5 py-1 rounded-md text-zinc-400';
+      document.getElementById('privacy-hint').innerText = type === 'publica'
+        ? 'Tu foto será visible para todos en tu provincia.'
+        : 'Tu foto estará protegida y solo la verán quienes aceptes.';
+    }
+
+    function markPaymentStarted() {
+      localStorage.setItem('matchat_paid_at', Date.now());
+    }
+
+    function completeRegistration() {
+      const name = document.getElementById('reg-name').value || 'Usuario';
+      const age = document.getElementById('reg-age').value || '25';
+      const prov = document.getElementById('reg-province').value;
+
+      document.getElementById('my-name-display').innerText = `${name}, ${age}`;
+      document.getElementById('my-prov-display').innerText = `${prov} • Foto ${photoPrivacy === 'publica' ? 'Pública' : 'Privada'}`;
+      document.getElementById('user-prov-label').innerText = prov;
+
+      document.getElementById('screen-onboarding').classList.add('hidden');
+      document.getElementById('screen-main').classList.remove('hidden');
+      openModal('modal-permissions');
+    }
+
+    function switchTab(tab) {
+      ['explore', 'chats', 'profile'].forEach(t => document.getElementById(`tab-${t}`).classList.add('hidden'));
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+    }
+
+    function nextProfile() {
+      currentIdx = (currentIdx + 1) % profiles.length;
+      const p = profiles[currentIdx];
+      document.getElementById('card-name').innerText = p.name;
+      document.getElementById('card-age').innerText = p.age;
+      document.getElementById('card-loc').innerText = p.loc;
+      document.getElementById('card-bio').innerText = p.bio;
+      const img = document.getElementById('card-img');
+      img.src = p.img;
+      img.className = p.priv ? 'absolute inset-0 w-full h-full object-cover blur-private' : 'absolute inset-0 w-full h-full object-cover';
+      document.getElementById('card-badge').innerText = p.priv ? '🔒 Foto Privada' : 'Foto Pública';
+    }
+
+    function likeProfile() {
+      alert('¡Enviaste un Me Gusta! Si te acepta podrán chatear.');
+      nextProfile();
+    }
+
+    function sendDirectRequest() {
+      closeModal('modal-dm');
+      alert('Solicitud enviada. El chat se activará cuando acepte tu mensaje.');
+      nextProfile();
+    }
+
+    function sendChat() {
+      const inp = document.getElementById('chat-input');
+      if (!inp.value.trim()) return;
+      const box = document.getElementById('chat-messages');
+      box.innerHTML += `<div class="bg-pink-600 text-white p-2.5 rounded-xl rounded-tr-none max-w-[80%] ml-auto">${inp.value}</div>`;
+      inp.value = '';
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function likeUserPhoto() {
+      const box = document.getElementById('chat-messages');
+      box.innerHTML += `<div class="text-center text-[11px] text-pink-400 py-1">♥ Le diste Me Gusta a una foto de Camila</div>`;
+    }
+
+    function simulateDay28() {
+      document.getElementById('sub-days-left').innerText = '7 días';
+      document.getElementById('renewal-alert').classList.remove('hidden');
+      alert('Simulación activada: faltan 7 días para cumplir los 35 días. Apareció el aviso de renovación.');
+    }
+
+    function filterMode(mode) {
+      document.getElementById('filter-prov').className = mode === 'provincia' ? 'flex-1 py-2 rounded-xl text-xs font-semibold bg-pink-600 text-white' : 'flex-1 py-2 rounded-xl text-xs font-semibold bg-zinc-800 text-zinc-400';
+      document.getElementById('filter-cerca').className = mode === 'cerca' ? 'flex-1 py-2 rounded-xl text-xs font-semibold bg-pink-600 text-white' : 'flex-1 py-2 rounded-xl text-xs font-semibold bg-zinc-800 text-zinc-400';
+    }
+
+    function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+  </script>
+</body>
+</html>
